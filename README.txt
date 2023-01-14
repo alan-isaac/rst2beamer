@@ -9,6 +9,9 @@ provides a Docutils [#docutils]_ writer that transforms restructured text
 same. Via this script, ReST can therefore be used to prepare slides and
 presentations.
 
+This is an unofficial fork (of https://pypi.python.org/pypi/rst2beamer) that
+runs on both Python 2 and 3.
+
 
 Installation
 ============
