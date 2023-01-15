@@ -1,23 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-# Copyright (C) 2007-2009 Ryan Krauss, Paul-Michael Agapow
-# Copyright (C) 2013-2016 Steven Myint
-# Copyright (C) 2022 Alan Isaac, assigned to any of the above.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 Provides a docutils script converting restructured text into Beamer-flavoured LaTeX.
 
@@ -31,6 +14,25 @@ where ``infile.txt`` contains the rst and ``outfile.tex`` contains the
 Beamer-flavoured LaTeX.
 
 See <http:www.agapow.net/software/rst2beamer> for more details.
+(This is a fork of that project.)
+
+Copyright (C) 2007-2009 Ryan Krauss, Paul-Michael Agapow
+Copyright (C) 2013-2016 Steven Myint
+Copyright (C) 2022 Alan Isaac, assigned to each of the above authors.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 
 
@@ -39,10 +41,11 @@ See <http:www.agapow.net/software/rst2beamer> for more details.
 # TODO: convert document metadata to front page fields?
 # TODO: toc-conversion?
 # TODO: fix descriptions
+# TODO: remove pygments support?
+#       see https://docutils.sourceforge.io/sandbox/code-block-directive/tools/pygments-enhanced-front-ends/rst2latex-pygments
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+import logging
+logging.basicConfig(encoding='utf-8', level=logging.WARNING)
 
 import re
 
@@ -90,7 +93,7 @@ HIGHLIGHT_OPTIONS = {
 
 BEAMER_SPEC = (
     'Beamer options',
-    'These are derived almost entirely from the LaTeX2e options',
+    'Supplement the LaTeX2e options',
     tuple(
         [
             (
@@ -203,6 +206,7 @@ BEAMER_DEFAULTS = {
 BEAMER_DEFAULT_OVERRIDES = {'use_latex_docinfo': 1}
 
 
+# Used only by string_to_bool.
 BOOL_DICT = {'false': False,
              'true': True,
              '0': False,
@@ -370,7 +374,7 @@ def wrap_children_in_columns(par_node, children, width=None):
     par_node.children = new_children
 
 
-def has_sub_sections(node):
+def has_sub_sections(node) -> bool:
     """Test whether or not a section node has children with the tagname
     section.
 
@@ -380,29 +384,17 @@ def has_sub_sections(node):
     section) are assumed to be Beamer slides
 
     """
-    for child in node.children:
-        if child.tagname == 'section':
-            return True
-    return False
+    return any(child.tagname == 'section' for child in node.children)
 
 
 def string_to_bool(text, default=True):
     """Turn a commandline argument string into a boolean value.
 
-    >>> string_to_bool('true')
+    >>> all(string_to_bool(x) for x in ('true', '1', 'abc'))
     True
 
-    >>> string_to_bool('false')
+    >>> any(string_to_bool(x) for x in ('false', '0'))
     False
-
-    >>> string_to_bool('0')
-    False
-
-    >>> string_to_bool('1')
-    True
-
-    >>> string_to_bool('abc')
-    True
 
     """
     if isinstance(text, bool):
@@ -464,68 +456,51 @@ def get_lexer(text, lang):
 
 # Special nodes for marking up beamer layout.
 class columnset(nodes.container):
-
     """A group of columns to display on one slide.
-
     Named as per docutils standards.
-
     """
     # NOTE: a simple container, has no attributes.
 
 
 class column(nodes.container):
-
     """A single column, grouping content.
-
     Named as per docutils standards.
-
     """
-
     width = 0
 
 
 class beamer_note(nodes.container):
-
     """Annotations for a beamer presentation.
 
     Named as per docutils standards and to distinguish it from core
     docutils node type.
-
     """
 
 
 class onlybeamer(nodes.container):
-
-    """A block of text to appear in the presentation and not in the handouts or
-    article form.
+    """A block of text to appear in the presentation
+    but not in the handouts or article form.
 
     Named as per docutils standards.
-
     """
-
     handouttext = ''
 
 
 class block(nodes.container):
-
     """A block of text to appear in a block environment.
 
     Named as per docutils standards.
-
     """
-
     title = ''
 
 
-# DIRECTIVES
+#### DIRECTIVES
 
 class CodeBlockDirective(Directive):
+    """Directive for a code block
+    with special highlighting or line numbering settings.
 
-    """Directive for a code block with special highlighting or line numbering
-    settings.
-
-    Unabashedly borrowed from the Sphinx source.
-
+    Borrowed from the Sphinx source.
     """
     has_content = True
     required_arguments = 0
@@ -555,12 +530,10 @@ for _name in ['code-block', 'sourcecode']:
 
 
 class SimpleColsDirective(Directive):
-
     """A directive that wraps all contained nodes in beamer columns.
 
     Accept 'width' as an optional argument for total width of contained
     columns.
-
     """
     required_arguments = 0
     optional_arguments = 1
@@ -728,7 +701,6 @@ directives.register_directive('beamer-note', NoteDirective)
 
 
 class BeamerSection(Directive):
-
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
@@ -819,18 +791,18 @@ directives.register_directive('block', BlockDirective)
 
 
 class BeamerTranslator(LaTeXTranslator):
-
     """A converter for docutils elements to beamer-flavoured latex."""
 
     def __init__(self, document):
         LaTeXTranslator.__init__(self, document)
 
         # Used for Beamer title and possibly header/footer. Set from docinfo
-        # record the settings for codeblocks.
+        # record the settings for codeblocks (cb).
         self.organization = None
-        self.cb_use_pygments = document.settings.cb_use_pygments
-        self.cb_replace_tabs = document.settings.cb_replace_tabs
-        self.cb_default_lang = document.settings.cb_default_lang
+        settings = document.settings
+        self.cb_use_pygments = settings.cb_use_pygments
+        self.cb_replace_tabs = settings.cb_replace_tabs
+        self.cb_default_lang = settings.cb_default_lang
 
         self.head_prefix = [x for x in self.head_prefix
                             if '{typearea}' not in x]
@@ -852,30 +824,35 @@ class BeamerTranslator(LaTeXTranslator):
             ])
 
         # set appropriate header options for theming
-        theme = document.settings.theme
+        theme = settings.theme
         if theme:
-            self.head_prefix.append('\\usetheme{%s}\n' % theme)
+            usetheme = f'\\usetheme{{{str(theme)}}}\n'
+            logging.debug(f"Set theme: {usetheme}")
+            self.head_prefix.append(usetheme)
 
-        set_header_options(self.head_prefix, document.settings.shownotes)
+        set_header_options(self.head_prefix, settings.shownotes)
 
         if self.cb_use_pygments:
             self.head_prefix.extend([
                 LatexFormatter().get_style_defs(),
             ])
 
+        # Here `string_to_bool` is given a False fallback,
+        # replacing True (the keyword default).
+        # If you pass in a value other than a bool or a string,
+        # this assumes you want something other than the actual default.
+        # TODO: change?
+        logging.debug(f"overlay_bullets: {type(settings.overlaybullets)} {settings.overlaybullets}")
         self.overlay_bullets = string_to_bool(
-            document.settings.overlaybullets, False)
+            settings.overlaybullets, False)
+        logging.debug(f"fragile_default: {type(settings.fragile_default)} {settings.fragile_default}")
         self.fragile_default = string_to_bool(
-            document.settings.fragile_default,
+            settings.fragile_default,
             True)
-        self.shortauthor = document.settings.shortauthor
-        self.shorttitle = document.settings.shorttitle
-        # using a False default because
-        # True is the actual default. If you are trying to pass in a value
-        # and I can't determine what you really meant, I am assuming you
-        # want something other than the actual default.
+        self.shortauthor = settings.shortauthor
+        self.shorttitle = settings.shorttitle
         self.centerfigs = string_to_bool(
-            document.settings.centerfigs,
+            settings.centerfigs,
             False)  # same reasoning as above
         self.in_columnset = False
         self.in_column = False
@@ -889,19 +866,26 @@ class BeamerTranslator(LaTeXTranslator):
 
     def depart_document(self, node) -> None:
         # Complete header with information gained from walkabout
+        # * language setup
+        if (self.babel.otherlanguages
+            or self.babel.language not in ('', 'english')):
+            self.requirements['babel'] = self.babel()
         # a) conditional requirements (before style sheet)
         self.requirements = self.requirements.sortedvalues()
         # b) coditional fallback definitions (after style sheet)
         self.fallbacks = self.fallbacks.sortedvalues()
         # c) PDF properties
         self.pdfsetup.append(PreambleCmds.linking % self.hyperref_options)
-
         if self.pdfauthor:
             authors = self.author_separator.join(self.pdfauthor)
             self.pdfinfo.append('  pdfauthor={%s}' % authors)
         if self.pdfinfo:
             self.pdfsetup += [r'\hypersetup{'] + self.pdfinfo + ['}']
         # Complete body
+        # * document title (with "use_latex_docinfo" also
+        #   'author', 'organization', 'contact', 'address' and 'date')
+
+        #ai: method is SAME UP TO HERE; the changes are to the title handling
         # a) document title (part 'body_prefix')
         # NOTE: Docutils puts author/date into docinfo, so normally
         #       we do not want LaTeX author/date handling (via \maketitle).
@@ -937,27 +921,33 @@ class BeamerTranslator(LaTeXTranslator):
                 docinfo_str = DOCINFO_W_INSTITUTE % tuple(docinfo_list)
             self.body_pre_docinfo.append(docinfo_str)
 
-        # b) bibliography
-        # TODO insertion point of bibliography should be configurable.
-        if self.use_latex_citations and self._bibitems: #ai: no longer _use_latex_citations
-            if not self.bibtex:
-                widest_label = ''
-                for bib_item in self._bibitems:
-                    if len(widest_label) < len(bib_item[0]):
-                        widest_label = bib_item[0]
-                self.out.append(f'\n\\begin{thebibliography}{widest_label}\n')
-                for bib_item in self._bibitems:
-                    # cite_key: underscores must not be escaped
-                    cite_key = bib_item[0].replace(r'\_', '_')
-                    self.out.append('\\bibitem[%s]{%s}{%s}\n' %
-                                    (bib_item[0], cite_key, bib_item[1]))
-                self.out.append('\\end{thebibliography}\n')
-            else:
-                self.out.append(f'\n\\bibliographystyle{self.bibtex[0]}\n')
-                self.out.append(f'\\bibliography{self.bibtex[1]}\n')
-        # c) make sure to generate a toc file if needed for local contents:
+        #ai: the rest of this method is unchanged
+        # * bibliography
+        #   TODO insertion point of bibliography should be configurable.
+        if self.bibtex and self._bibitems:
+            bibinfo = f"""
+            \\bibliographystyle{{{self.bibtex[0]}}}
+            \\bibliography{{{','.join(self.bibtex[1:])}}}
+            """
+            logging.debug("bibinfo: {bibinfo}")
+            self.out.append(bibinfo)
+        elif self.use_latex_citations and self._bibitems:
+            # TODO: insert citations at point of definition.
+            widest_label = ''
+            for bibitem in self._bibitems:
+                if len(widest_label) < len(bibitem[0]):
+                    widest_label = bibitem[0]
+            self.out.append(f"\n\\begin{thebibliography}{{{widest_label}}}\n")
+            for bibitem in self._bibitems:
+                # cite_key: underscores must not be escaped
+                cite_key = bibitem[0].replace(r'\_', '_')
+                self.out.append('\\bibitem[%s]{%s}{%s}\n' %
+                                (bibitem[0], cite_key, bibitem[1]))
+            self.out.append('\\end{thebibliography}\n')
+        # * make sure to generate a toc file if needed for local contents:
         if 'minitoc' in self.requirements and not self.has_latex_toc:
             self.out.append('\n\\faketableofcontents % for local ToCs\n')
+
 
     def visit_docinfo_item(self, node, name):
         '''Check renewed source:
@@ -992,16 +982,9 @@ class BeamerTranslator(LaTeXTranslator):
         attrs = node.attributes
         if 'align' not in attrs and self.centerfigs:
             attrs['align'] = 'center'
-        if (
-            ('height' not in attrs) and
-            ('width' not in attrs) and
-            ('scale' not in attrs)
-        ):
+        if not any(a in attrs for a in ('height', 'width', 'scale')):
             attrs['height'] = '0.75\\textheight'
         LaTeXTranslator.visit_image(self, node)
-
-    def depart_Text(self, node):
-        pass
 
     def visit_section(self, node):
         if node.astext() == 'blankslide':
