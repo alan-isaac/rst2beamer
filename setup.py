@@ -15,7 +15,7 @@ def version():
                 return ast.parse(line).body[0].value.s
 
 with open('README.rst') as readme:
-    with open('HISTORY.rst') as history:
+    with open('docs/HISTORY.rst') as history:
         DESCRIPTION = readme.read() + '\n' + history.read()
 
 
