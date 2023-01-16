@@ -2,6 +2,19 @@ History
 =======
 
 
+v0.9.2
+-------------------------------------
+
+* Incorporate all rst2beamer.py changes from f-i.
+* Fix use-latex-citations (broken by change in docutils latex writer)
+* Remove BeamerTranslator.visit_docinfo_item and rely on
+  LaTeXTranslator.visit_docinfo_item
+  Remark: the corresponding test is now out of date
+* change PreambleCmds.documenttitle to use institute instead of author
+  in order to get easy support for multiple authors
+  (with minimum change from LaTeXTranslator).
+  To match font, date is now forced to small.
+
 v0.9.1, 2016-01-11
 ------------------
 
