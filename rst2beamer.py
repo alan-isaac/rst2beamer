@@ -36,13 +36,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 
+# TODO: remove separate pygments support? docutils builds in support since 0.9
+#       also see https://docutils.sourceforge.io/sandbox/code-block-directive/tools/pygments-enhanced-front-ends/rst2latex-pygments
 # TODO: modifications for handout sections?
 # TODO: sections and subsections?
 # TODO: convert document metadata to front page fields?
 # TODO: toc-conversion?
 # TODO: fix descriptions
-# TODO: remove pygments support?
-#       see https://docutils.sourceforge.io/sandbox/code-block-directive/tools/pygments-enhanced-front-ends/rst2latex-pygments
 
 import logging
 logging.basicConfig(encoding='utf-8', level=logging.WARNING)
@@ -175,7 +175,7 @@ BEAMER_SPEC = (
                     'action': 'store',
                     'type': int,
                     'dest': 'cb_replace_tabs',
-                    'default': 0,
+                    'default': 2,
                 }
             ),
             # what language the codeblock is if not specified
@@ -212,14 +212,20 @@ BOOL_DICT = {'false': False,
              '0': False,
              '1': True}
 
+#ai: note that use of institute instead of author!
+#    (this hack because of how LaTeXTranslator works.)
+#    To match font, date is now forced to small.
 PreambleCmds.documenttitle = r"""
 %% Document title
 \title[%s]{%s}
-\author[%s]{%s}
-\date{%s}
+\institute[%s]{%s}
+\date{\small{%s}}
 \maketitle
 """
 
+#ai: not using this anymore because
+#    `organization` is no longer an attribute
+#    of the LaTeXTranslator
 DOCINFO_W_INSTITUTE = r"""
 %% Document title
 \title[%s]{%s}
@@ -798,7 +804,6 @@ class BeamerTranslator(LaTeXTranslator):
 
         # Used for Beamer title and possibly header/footer. Set from docinfo
         # record the settings for codeblocks (cb).
-        self.organization = None
         settings = document.settings
         self.cb_use_pygments = settings.cb_use_pygments
         self.cb_replace_tabs = settings.cb_replace_tabs
@@ -914,11 +919,7 @@ class BeamerTranslator(LaTeXTranslator):
                             shortauthor,
                             ' \\and\n'.join(authors),
                             ', '.join(self.date)]
-            if self.organization is None:
-                docinfo_str = PreambleCmds.documenttitle % tuple(docinfo_list)
-            else:
-                docinfo_list.append(self.organization)
-                docinfo_str = DOCINFO_W_INSTITUTE % tuple(docinfo_list)
+            docinfo_str = PreambleCmds.documenttitle % tuple(docinfo_list)
             self.body_pre_docinfo.append(docinfo_str)
 
         #ai: the rest of this method is unchanged
@@ -947,36 +948,6 @@ class BeamerTranslator(LaTeXTranslator):
         # * make sure to generate a toc file if needed for local contents:
         if 'minitoc' in self.requirements and not self.has_latex_toc:
             self.out.append('\n\\faketableofcontents % for local ToCs\n')
-
-
-    def visit_docinfo_item(self, node, name):
-        '''Check renewed source:
-        https://sourceforge.net/p/docutils/code/HEAD/tree/trunk/docutils/docutils/writers/latex2e/__init__.py'''
-        if self.use_latex_docinfo:
-            if name in ('author', 'organization', 'contact', 'address'):
-                # We attach these to the last author.  If any of them precedes
-                # the first author, put them in a separate "author" group
-                # (in lack of better semantics).
-                if name == 'author' or not self.author_stack:
-                    self.author_stack.append([])
-                if name == 'address':   # newlines are meaningful
-                    self.insert_newline = True
-                    text = self.encode(node.astext())
-                    self.insert_newline = False
-                else:
-                    text = self.attval(node.astext())
-                self.author_stack[-1].append(text)
-                raise nodes.SkipNode
-            elif name == 'date':
-                self.date.append(self.attval(node.astext()))
-                raise nodes.SkipNode
-        self.out.append('\\textbf{%s}: &\n\t' % self.language_label(name))
-        if name == 'address':
-            self.insert_newline = True
-            self.out.append('{\\raggedright\n')
-            self.context.append(' } \\\\\n')
-        else:
-            self.context.append(' \\\\\n')
 
     def visit_image(self, node):
         attrs = node.attributes

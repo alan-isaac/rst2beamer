@@ -7,8 +7,10 @@ Subtitle
 --------
 
 :author: Au Thor
+:organization: Thor U
+:author: Auth Or
+:organization: Or U
 :date: January 1, 2525
-:organization: Cu U
 
 Slide 1
 =======
