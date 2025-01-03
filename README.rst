@@ -10,7 +10,7 @@ same. Via this script, ReST can therefore be used to prepare slides and
 presentations.
 
 This is an unofficial fork (of https://pypi.python.org/pypi/rst2beamer) that
-runs on both Python 2 and 3.
+runs on both Python 3.8+.
 
 
 Installation
