@@ -804,6 +804,7 @@ class BeamerTranslator(LaTeXTranslator):
 
         # Used for Beamer title and possibly header/footer. Set from docinfo
         # record the settings for codeblocks (cb).
+        #ai: settings = document.settings
         settings = document.settings
         self.cb_use_pygments = settings.cb_use_pygments
         self.cb_replace_tabs = settings.cb_replace_tabs
@@ -875,10 +876,17 @@ class BeamerTranslator(LaTeXTranslator):
         if (self.babel.otherlanguages
             or self.babel.language not in ('', 'english')):
             self.requirements['babel'] = self.babel()
+        #
         # a) conditional requirements (before style sheet)
-        self.requirements = self.requirements.sortedvalues()
-        # b) coditional fallback definitions (after style sheet)
-        self.fallbacks = self.fallbacks.sortedvalues()
+        #ai: self.requirements = self.requirements.sortedvalues() #old version
+        self.requirements = [self.requirements[key]
+                             for key in sorted(self.requirements.keys())
+                             if self.requirements[key]]
+        #
+        # b) conditional fallback definitions (after style sheet)
+        #ai: self.fallbacks = self.fallbacks.sortedvalues() #old version
+        self.fallbacks = [self.fallbacks[key]
+                          for key in sorted(self.fallbacks.keys())]
         # c) PDF properties
         self.pdfsetup.append(PreambleCmds.linking % self.hyperref_options)
         if self.pdfauthor:
