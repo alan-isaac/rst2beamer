@@ -962,7 +962,9 @@ class BeamerTranslator(LaTeXTranslator):
         if 'align' not in attrs and self.centerfigs:
             attrs['align'] = 'center'
         if not any(a in attrs for a in ('height', 'width', 'scale')):
-            attrs['height'] = '0.75\\textheight'
+            #ai: rst2latex no longer handles textheight
+            #attrs['height'] = '0.75\\textheight'
+            attrs['height'] = '75vh'  #75% of the paper height
         LaTeXTranslator.visit_image(self, node)
 
     def visit_section(self, node):
